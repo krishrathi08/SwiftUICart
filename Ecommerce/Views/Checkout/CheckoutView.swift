@@ -396,7 +396,7 @@ struct CheckoutView: View {
     private func placeOrder() {
         isProcessing = true
         
-        // Simulate order processing
+        // Demo-only order completion. No payment is charged or order submitted.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             orderId = "ORD-\(Int.random(in: 100000...999999))"
             cartManager.clearCart()

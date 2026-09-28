@@ -2,7 +2,8 @@
 //  NetworkManager.swift
 //  Ecommerce
 //
-//  HTTP client for API requests with async/await
+//  Backend-ready HTTP client for API requests with async/await.
+//  The current UI uses local sample data and does not invoke this service yet.
 //
 
 import Foundation

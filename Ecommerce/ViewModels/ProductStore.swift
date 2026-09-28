@@ -94,6 +94,8 @@ class ProductStore: ObservableObject {
     }
     
     // MARK: - Data Loading
+    // The demo deliberately publishes local sample data. Replace this path with
+    // NetworkManager calls only after a real API contract is available.
     func loadInitialData() {
         isLoading = true
         
@@ -136,7 +138,7 @@ class ProductStore: ObservableObject {
         // Simulate network request
         try? await Task.sleep(nanoseconds: 500_000_000)
         
-        // In real app, fetch next page from API
+        // This models pagination for the UI; it does not fetch a remote page.
         currentPage += 1
         
         // Simulate adding more products (duplicate with new IDs)

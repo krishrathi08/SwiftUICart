@@ -1,415 +1,78 @@
-# API Documentation
+# API Integration Notes
 
-## Overview
+## Status
 
-This document describes the API endpoints that the ShopNow app is designed to integrate with. Currently, the app uses **mock/sample data** for demonstration purposes.
+The shipped app currently runs on `Product.sampleProducts` and simulates refresh, pagination, and order placement. No HTTP request is made by the active UI.
 
----
+`Ecommerce/Services/NetworkManager.swift` is a backend-ready `URLSession` client. Its placeholder base URL is `https://api.example.com/v1`; replace it and connect the view-model/checkout call sites before treating the following routes as an active API.
 
-## Base URL
+## Client behavior
 
-```
-https://api.example.com/v1
-```
+`NetworkManager.fetch<T: Decodable>`:
 
-## Authentication
+- builds URLs with `URLComponents` and optional query parameters;
+- sends JSON `Accept` and `Content-Type` headers;
+- accepts only HTTP 2xx responses;
+- decodes snake_case keys and ISO-8601 dates; and
+- throws typed `NetworkError` values for invalid URLs/responses, non-2xx status codes, and decoding errors.
 
-Most endpoints require authentication using JWT tokens.
-
-```http
-Authorization: Bearer <your_jwt_token>
-```
-
----
-
-## Endpoints
-
-### Products
-
-#### Get Products (with Pagination, Filtering, Sorting)
+## Expected product endpoint
 
 ```http
-GET /products
+GET /products?page=1&limit=20&category=Electronics&min_price=50&max_price=250&in_stock=true&search=headphones&sort=price_asc
 ```
 
-**Query Parameters:**
+The client can send these query parameters:
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `page` | integer | No | Page number (default: 1) |
-| `limit` | integer | No | Items per page (default: 20, max: 100) |
-| `category` | string | No | Filter by category |
-| `minPrice` | number | No | Minimum price filter |
-| `maxPrice` | number | No | Maximum price filter |
-| `search` | string | No | Search products by name/description |
-| `sort` | string | No | Sort option: `newest`, `price_asc`, `price_desc`, `rating`, `popular` |
-| `inStock` | boolean | No | Filter in-stock items only |
+| Parameter | Source |
+| --- | --- |
+| `page`, `limit` | Pagination arguments |
+| `category`, `min_price`, `max_price`, `in_stock`, `search` | `ProductFilters` |
+| `sort` | `SortOption` |
 
-**Example Request:**
-```http
-GET /products?page=1&limit=20&category=electronics&minPrice=100&maxPrice=500&sort=price_asc
-```
+The endpoint must decode into the codebase's `ProductListResponse`:
 
-**Example Response:**
 ```json
 {
-  "success": true,
-  "data": {
-    "products": [
-      {
-        "id": 1,
-        "name": "Premium Wireless Headphones",
-        "description": "High-quality wireless headphones...",
-        "price": 199.99,
-        "originalPrice": 299.99,
-        "imageURL": "https://cdn.example.com/products/headphones.jpg",
-        "category": "Electronics",
-        "rating": 4.8,
-        "reviewCount": 2459,
-        "inStock": true,
-        "colors": ["Black", "White", "Navy"],
-        "sizes": null
-      }
-    ],
-    "pagination": {
-      "currentPage": 1,
-      "totalPages": 5,
-      "totalItems": 100,
-      "itemsPerPage": 20
+  "products": [
+    {
+      "id": 1,
+      "name": "Premium Wireless Headphones",
+      "description": "...",
+      "price": 199.99,
+      "original_price": 299.99,
+      "image_url": "https://example.com/headphones.jpg",
+      "category": "Electronics",
+      "rating": 4.8,
+      "review_count": 2459,
+      "in_stock": true,
+      "colors": ["Black"],
+      "sizes": null
     }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "total_pages": 1,
+    "total_items": 1,
+    "items_per_page": 20
   },
-  "filters": {
-    "categories": ["Electronics", "Fashion", "Sports", "Home"],
-    "priceRange": {
-      "min": 0,
-      "max": 999
-    }
-  }
+  "filters": null
 }
 ```
 
----
-
-#### Get Single Product
-
-```http
-GET /products/:id
-```
-
-**Example Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "name": "Premium Wireless Headphones",
-    "description": "Detailed product description...",
-    "price": 199.99,
-    "originalPrice": 299.99,
-    "imageURL": "https://cdn.example.com/products/headphones.jpg",
-    "images": [
-      "https://cdn.example.com/products/headphones-1.jpg",
-      "https://cdn.example.com/products/headphones-2.jpg"
-    ],
-    "category": "Electronics",
-    "rating": 4.8,
-    "reviewCount": 2459,
-    "inStock": true,
-    "colors": ["Black", "White", "Navy"],
-    "sizes": null,
-    "specifications": {
-      "battery": "30 hours",
-      "connectivity": "Bluetooth 5.0",
-      "weight": "250g"
-    }
-  }
-}
-```
-
----
-
-### Orders
-
-#### Create Order
+## Expected order endpoint
 
 ```http
 POST /orders
+Content-Type: application/json
 ```
 
-**Request Body:**
-```json
-{
-  "items": [
-    {
-      "productId": 1,
-      "productName": "Premium Wireless Headphones",
-      "price": 199.99,
-      "quantity": 2,
-      "selectedColor": "Black",
-      "selectedSize": null
-    }
-  ],
-  "shippingAddress": {
-    "fullName": "Yash Dogra",
-    "streetAddress": "123 Main Street",
-    "city": "San Francisco",
-    "state": "CA",
-    "zipCode": "94102",
-    "country": "United States",
-    "phoneNumber": "+1234567890"
-  },
-  "paymentMethod": "credit_card"
-}
-```
+`NetworkManager.createOrder(items:shippingAddress:paymentMethod:)` encodes the existing `OrderRequest` type and expects an `Order` response. The present checkout screen does not invoke this method and does not collect card details.
 
-**Example Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "ORD-123456",
-    "items": [...],
-    "shippingAddress": {...},
-    "paymentMethod": "credit_card",
-    "subtotal": 399.98,
-    "tax": 31.99,
-    "shippingCost": 0,
-    "total": 431.97,
-    "status": "confirmed",
-    "createdAt": "2026-01-14T21:00:00Z",
-    "estimatedDelivery": "2026-01-19T00:00:00Z"
-  }
-}
-```
+## Integration checklist
 
----
-
-#### Get Order
-
-```http
-GET /orders/:id
-```
-
-**Example Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "ORD-123456",
-    "status": "shipped",
-    "trackingNumber": "1Z999AA10123456784",
-    "items": [...],
-    "total": 431.97,
-    "createdAt": "2026-01-14T21:00:00Z",
-    "shippedAt": "2026-01-15T10:00:00Z"
-  }
-}
-```
-
----
-
-#### Get User Orders
-
-```http
-GET /orders?userId=<user_id>&page=1&limit=10
-```
-
----
-
-### User Authentication
-
-#### Register
-
-```http
-POST /auth/register
-```
-
-**Request Body:**
-```json
-{
-  "name": "Yash Dogra",
-  "email": "yxshdogra@gmail.com",
-  "password": "securePassword123",
-  "phoneNumber": "+917876205914"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "user-123",
-      "name": "Yash Dogra",
-      "email": "yxshdogra@gmail.com"
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-}
-```
-
----
-
-#### Login
-
-```http
-POST /auth/login
-```
-
-**Request Body:**
-```json
-{
-  "email": "yxshdogra@gmail.com",
-  "password": "securePassword123"
-}
-```
-
----
-
-### Cart (Server-side sync - optional)
-
-#### Get Cart
-
-```http
-GET /cart
-```
-
-#### Update Cart
-
-```http
-POST /cart
-```
-
-**Request Body:**
-```json
-{
-  "items": [
-    {
-      "productId": 1,
-      "quantity": 2,
-      "selectedColor": "Black",
-      "selectedSize": null
-    }
-  ]
-}
-```
-
----
-
-## Error Responses
-
-All endpoints return errors in the following format:
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "PRODUCT_NOT_FOUND",
-    "message": "The requested product could not be found"
-  }
-}
-```
-
-### Common Error Codes
-
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `VALIDATION_ERROR` | 400 | Invalid request parameters |
-| `UNAUTHORIZED` | 401 | Missing or invalid authentication |
-| `FORBIDDEN` | 403 | Insufficient permissions |
-| `NOT_FOUND` | 404 | Resource not found |
-| `CONFLICT` | 409 | Resource conflict (e.g., duplicate) |
-| `SERVER_ERROR` | 500 | Internal server error |
-
----
-
-## Rate Limiting
-
-- **Rate Limit:** 100 requests per minute per IP
-- **Headers:**
-  - `X-RateLimit-Limit`: Request limit
-  - `X-RateLimit-Remaining`: Remaining requests
-  - `X-RateLimit-Reset`: Time when limit resets
-
----
-
-## Integration Guide
-
-### 1. Update Base URL
-
-In `NetworkManager.swift`:
-
-```swift
-private let baseURL = "https://your-api.com/v1"
-```
-
-### 2. Update ProductStore
-
-Replace sample data in `ProductStore.swift`:
-
-```swift
-func loadInitialData() {
-    isLoading = true
-    
-    Task {
-        do {
-            let response: ProductListResponse = try await NetworkManager.shared.fetchProducts(
-                page: 1,
-                limit: 20
-            )
-            self.products = response.products
-            self.totalPages = response.pagination.totalPages
-            self.isLoading = false
-        } catch {
-            self.error = error.localizedDescription
-            self.isLoading = false
-        }
-    }
-}
-```
-
-### 3. Add Authentication
-
-Store JWT token securely:
-
-```swift
-// Using Keychain or UserDefaults (for development)
-@AppStorage("authToken") private var authToken: String = ""
-```
-
-Add to NetworkManager headers:
-
-```swift
-func fetch<T: Decodable>(endpoint: String, ...) async throws -> T {
-    var request = URLRequest(url: url)
-    request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
-    // ... rest of implementation
-}
-```
-
----
-
-## Testing
-
-Use tools like:
-- **Postman** - API testing
-- **Charles Proxy** - Network debugging
-- **MockServer** - Mock API responses
-
----
-
-## Webhook Events (Future)
-
-For real-time updates:
-
-```json
-{
-  "event": "order.status_updated",
-  "data": {
-    "orderId": "ORD-123456",
-    "status": "shipped",
-    "trackingNumber": "1Z999AA10123456784"
-  }
-}
-```
+1. Configure a real base URL outside source control for each environment.
+2. Confirm server response keys match the Codable models, or add explicit `CodingKeys`.
+3. Inject the networking dependency into `ProductStore`; replace sample-data and simulated-pagination paths.
+4. Call `createOrder` from checkout and show loading/error/success states.
+5. Add authentication, secure token storage, retries, and tests only when the backend requirements are defined.

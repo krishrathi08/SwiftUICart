@@ -1,6 +1,6 @@
-# Contributing to ShopNow
+# Contributing to SwiftCart
 
-First off, thank you for considering contributing to ShopNow! 🎉
+First off, thank you for considering contributing to SwiftCart! 🎉
 
 ## How Can I Contribute?
 

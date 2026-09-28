@@ -1,324 +1,114 @@
-# SwiftCart — SwiftUI Ecommerce App
+# SwiftCart
 
-<div align="center">
+SwiftCart is a native iOS e-commerce demo built with SwiftUI. It is a study project for exploring a practical shopping flow: browse a local product catalogue, search and filter it, configure a product, manage a shared cart, and complete a simulated checkout.
 
-![iOS](https://img.shields.io/badge/iOS-18.0%2B-blue.svg)
-![Swift](https://img.shields.io/badge/Swift-5.0-orange.svg)
-![SwiftUI](https://img.shields.io/badge/SwiftUI-3.0-green.svg)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+> **Current data mode:** the running app uses bundled sample data and simulated delays. `NetworkManager` is an async/await API-client scaffold for a future backend, but it is not wired into the active product or order flows.
 
-**A production-ready iOS ecommerce experience built in SwiftUI** — product browsing, cart, checkout, and a modern, polished UI.
+## Features
 
-[Features](#features) • [Installation](#installation) • [Architecture](#architecture) • [Screenshots](#screenshots) • [API](#api-integration)
+- Browse featured products in grid or list layouts.
+- Search locally by product name, description, or category.
+- Filter by category, price range, and availability; sort by popularity, rating, price, or demo "newest" order.
+- View product details, choose available colour/size variants, adjust quantity, share a product name, and add items to the cart.
+- Maintain a shared in-memory cart with variant-aware lines, quantity controls, swipe-to-delete, totals, tax, and a free-shipping threshold.
+- Complete a three-step simulated checkout: shipping address, payment-method selection, review, and confirmation.
+- Reuse loading, empty, error, filter-chip, and custom-layout components.
 
-</div>
+## Tech stack
 
----
+| Area | Implementation |
+| --- | --- |
+| Language and UI | Swift 5, SwiftUI |
+| Architecture | MVVM-inspired views, observable state, models, and services |
+| Concurrency | Swift `async`/`await`, `Task`, and `@MainActor` |
+| State | `@StateObject`, `@EnvironmentObject`, `@Published`, `@State`, `@Binding` |
+| Networking scaffold | `URLSession`, `URLComponents`, `Codable`, `JSONDecoder` |
+| Tooling | Xcode / XcodeGen (`project.yml`) |
+| Dependencies | None; native Apple frameworks only |
 
+The project configuration targets iOS 18. Use an Xcode version that supports that SDK.
 
-<video controls src="assets/demo.mov" title="Demo"></video>
+## Architecture
 
-
----
-
-## ✨ Features
-
-### 🛍️ Product Management
-- **Smart Product Listing** — Grid/List toggle with smooth animations
-- **Advanced Filtering** — Category, price range, and availability filters
-- **Multi-Sort Options** — Sort by newest, price, rating, or popularity
-- **Infinite Scroll** — Pagination with automatic loading
-- **Search** — Real-time product search
-- **Featured Deals** — Highlighted promotional products
-
-### 🛒 Shopping Cart
-- **Real-time Updates** — Live price calculations
-- **Quantity Controls** — Increment/decrement with haptic feedback
-- **Free Shipping Tracker** — Visual progress indicator
-- **Persistent State** — Cart preserved across app sessions
-- **Swipe to Delete** — Intuitive item removal
-
-### 💳 Checkout Flow
-- **Multi-step Process** — Shipping → Payment → Review
-- **Form Validation** — Real-time input validation
-- **Multiple Payment Methods** — Credit Card, Apple Pay, PayPal
-- **Order Confirmation** — Animated success screen
-
-### 🎨 UI/UX Excellence
-- **Custom Gradient Theme** — Purple/pink gradients
-- **Dark Mode Support** — Fully adaptive design
-- **Smooth Animations** — Spring animations and transitions
-- **Empty States** — Thoughtful placeholders
-- **Loading States** — Shimmer effects and spinners
-- **Error Handling** — User-friendly error messages
-
----
-
-## 🚀 Installation
-
-### Prerequisites
-- macOS 14.0+
-- Xcode 15.0+
-- iOS 18.0+ (for running on simulator/device)
-
-### Setup
-
-1. **Clone the repository**
-```bash
-git clone https://github.com/yxshee/swiftcart.git
-cd swiftcart
+```text
+SwiftUI Views
+    |  observe / send intents
+    v
+ProductStore, CartManager
+    |  work with
+    v
+Product, CartItem, Order models     NetworkManager (backend-ready scaffold)
 ```
 
-2. **Open in Xcode**
-```bash
-open "Ecommerce.xcodeproj"
-```
+`EcommerceApp` creates one `CartManager` and one `ProductStore` with `@StateObject`, then injects them at the root. Descendant views read the same instances with `@EnvironmentObject`, so a cart update immediately refreshes the tab badge, product cards, cart, and checkout summary.
 
-3. **Download iOS Simulator** (if needed)
-   - Xcode → Settings → Platforms → iOS → Download
+## Project structure
 
-4. **Build and Run**
-   - Select your target device/simulator
-   - Press `⌘ + R` or click the Run button
-
----
-
-## 🏗️ Architecture
-
-### MVVM Pattern
-```mermaid
-graph TD
-    View[SwiftUI View] <-->|Binding| ViewModel[ViewModel]
-    ViewModel <-->|Async/Await| Service[Network Service]
-    Service <-->|JSON| Model[Data Model]
-```
-
-### Project Structure
-```
+```text
 Ecommerce/
-├── EcommerceApp.swift          # App entry point
-├── ContentView.swift            # Main TabView
-├── Models/
-│   ├── Product.swift            # Product data model
-│   ├── CartItem.swift           # Cart item model
-│   ├── Order.swift              # Order & shipping models
-│   └── APIResponse.swift        # API response wrappers
+├── EcommerceApp.swift             App entry point and shared-state injection
+├── ContentView.swift              Root tab navigation
+├── Models/                        Codable domain and API-contract types
 ├── ViewModels/
-│   ├── CartManager.swift        # Cart state management
-│   └── ProductStore.swift       # Product fetching & caching
+│   ├── ProductStore.swift         Catalogue, local search/filter/sort, demo pagination
+│   └── CartManager.swift          Cart mutations and derived totals
 ├── Services/
-│   └── NetworkManager.swift     # HTTP client (async/await)
+│   └── NetworkManager.swift       Generic async HTTP client and endpoint helpers
 ├── Views/
-│   ├── Products/                # Product listing & detail
-│   ├── Cart/                    # Shopping cart views
-│   ├── Checkout/                # Checkout flow
-│   └── Profile/                 # User profile
-├── Components/
-│   ├── FilterSheet.swift        # Reusable filter UI
-│   ├── LoadingView.swift        # Loading indicators
-│   └── EmptyStateView.swift     # Empty state placeholders
-└── Utils/
-    └── Constants.swift          # App constants & extensions
+│   ├── Products/                  Discovery, cards, and detail screen
+│   ├── Cart/                      Cart list and quantity controls
+│   ├── Checkout/                  Simulated checkout and confirmation
+│   └── Profile/                   Static profile presentation
+├── Components/                    Reusable loading, empty-state, and filter UI
+└── Utils/Constants.swift          Theme, reusable modifiers, and helpers
 ```
 
----
+## Important implementation details
 
-## 📱 Screenshots
+- `ProductStore.filteredProducts` derives the displayed catalogue from products, search text, category, filters, and sort selection.
+- `CartManager.addToCart` treats product ID plus selected colour and size as a cart-line identity. Matching selections increase quantity rather than duplicate a line.
+- Cart subtotal, tax (8%), shipping ($9.99 below $100), and total are computed from `items`; they are never independently stored.
+- `ProductStore` is `@MainActor`. Its loading and pagination are deliberately simulated with delays and sample products using new IDs.
+- Checkout validates required shipping fields, then generates a local order number after a simulated processing delay. It does not submit payment details or create a remote order.
+- `FlowLayout` demonstrates a custom SwiftUI `Layout` for wrapping filter chips.
 
-<div align="center">
+## Networking and state management
 
-<img src="assets/home_screen.png" alt="home" width="23%">
-<img src="assets/01.png" alt="product detail" width="23%">
-<img src="assets/02.png" alt="cart" width="23%">
-<img src="assets/03.png" alt="checkout" width="23%">
+`NetworkManager` centralizes URL construction, request configuration, HTTP status validation, and `Codable` decoding. It supports generic requests, query parameters, a snake-case decoder, ISO-8601 dates, and typed errors. Its base URL is a placeholder (`https://api.example.com/v1`), so it will not provide a working backend unchanged.
 
-</div>
+The active app uses `Product.sampleProducts`. To connect a backend, replace sample-data paths in `ProductStore` and simulated order creation in `CheckoutView` with `NetworkManager` calls, then surface loading and error states in the UI.
 
----
+Cart state is session-only: it is shared for the app process and is not saved to disk.
 
-## 🔄 State Management
+## Main user flow
 
-### Shared State with @EnvironmentObject
+1. Launch into **Shop**; `ProductStore` loads sample products.
+2. Browse products; search, filter, sort, or switch grid/list presentation.
+3. Open a product, select its available options and quantity, then add it to the cart.
+4. Adjust or remove cart lines and review calculated totals.
+5. Enter a shipping address, choose a payment method, review, and place the simulated order.
+6. See a generated order number and return to shopping.
 
-```swift
-// App Level Injection
-@main
-struct EcommerceApp: App {
-    @StateObject private var cartManager = CartManager()
-    @StateObject private var productStore = ProductStore()
-    
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .environmentObject(cartManager)
-                .environmentObject(productStore)
-        }
-    }
-}
+## Run locally
 
-// Access in Any View
-struct ProductDetailView: View {
-    @EnvironmentObject var cartManager: CartManager
-    
-    func addToCart() {
-        cartManager.addToCart(product)
-    }
-}
-```
+1. Open `Ecommerce.xcodeproj` in Xcode.
+2. Select an iOS simulator or device.
+3. Build and run (`Cmd + R`).
 
-### CartManager Features
-- ✅ Add/remove items
-- ✅ Quantity management
-- ✅ Price calculations (subtotal, tax, shipping)
-- ✅ Free shipping threshold
-- ✅ Order creation
+`project.yml` is included for regenerating the project with XcodeGen. There is currently no test target; exercise the flow manually after changes.
 
----
+## Future improvements
 
-## 🌐 API Integration
+- Connect a real products/orders backend and map its response contract.
+- Add dependency injection and protocol-based service mocking for unit tests.
+- Persist cart and profile state safely; add authentication only with a real backend and Keychain storage.
+- Add real product images, accessibility labels, localization, and currency/locale formatting.
+- Implement profile menu destinations, order tracking, favorites, and production-grade form/payment validation.
 
-### Current Implementation
-The app uses **sample/mock data** for demonstration. To connect to a real backend:
+## Study guide
 
-### API Design (Ready for Backend)
+See [PROJECT_NOTES.md](PROJECT_NOTES.md) for a codebase-specific architecture walkthrough, data-flow guide, and interview-practice questions.
 
-#### Get Products with Pagination & Filtering
-```http
-GET /products?page=1&limit=20&category=electronics&minPrice=100&maxPrice=500&sort=price_asc
+## Attribution and license
 
-Response:
-{
-  "success": true,
-  "data": {
-    "products": [...],
-    "pagination": {
-      "currentPage": 1,
-      "totalPages": 5,
-      "totalItems": 100,
-      "itemsPerPage": 20
-    }
-  }
-}
-```
-
-#### Create Order
-```http
-POST /orders
-
-Request:
-{
-  "items": [...],
-  "shippingAddress": {...},
-  "paymentMethod": "credit_card"
-}
-
-Response:
-{
-  "success": true,
-  "data": {
-    "orderId": "ORD-123456",
-    "status": "confirmed",
-    "total": 299.99
-  }
-}
-```
-
-### Integration Steps
-1. Update `NetworkManager.swift` with your API base URL
-2. Replace sample data in `ProductStore.swift`
-3. Implement authentication if needed
-4. Add error handling for network failures
-
----
-
-## 🛠️ Technologies Used
-
-| Technology | Purpose |
-|------------|---------|
-| **SwiftUI** | Modern declarative UI framework |
-| **Async/Await** | Asynchronous networking |
-| **Combine** | Reactive state management |
-| **MVVM** | Architecture pattern |
-| **XcodeGen** | Project file generation |
-
----
-
-## 📦 Dependencies
-
-This project has **zero external dependencies** — built entirely with native Swift and SwiftUI frameworks.
-
----
-
-## 🧪 Testing
-
-```bash
-# Run unit tests
-⌘ + U in Xcode
-```
-
-> **Note**: Test files to be added in future versions
-
----
-
-## 🎯 Roadmap
-
-- [ ] Add user authentication
-- [ ] Implement wishlists
-- [ ] Add product reviews & ratings
-- [ ] Push notifications for order updates
-- [ ] Payment gateway integration
-- [ ] Order history & tracking
-- [ ] Product recommendations (ML)
-- [ ] Social sharing
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for details.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👨‍💻 Author
-
-**Yash Dogra**
-- Email: yxshdogra@gmail.com
-- GitHub: [@yxshee](https://github.com/yxshee)
-
----
-
-## 🙏 Acknowledgments
-
-- Apple's SwiftUI Documentation
-- iOS Design Guidelines
-- Community feedback and contributions
-
----
-
-## 📞 Support
-
-For questions or issues:
-- Open an issue on GitHub
-- Email: yxshdogra@gmail.com
-
----
-
-<div align="center">
-
-**Made with ❤️ using SwiftUI**
-
-⭐ Star this repo if you found it helpful!
-
-</div>
+This repository is derived from the original [yxshee/swiftcart](https://github.com/yxshee/swiftcart) project. The original MIT license and copyright notice are preserved in [LICENSE](LICENSE). Review the code and make substantive, truthful contributions before presenting it as part of your portfolio.
